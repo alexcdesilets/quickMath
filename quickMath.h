@@ -720,8 +720,7 @@ namespace quickMath {
 
         // --- Input Mapping to Normalized [-1, 1] Range ---
         // Normalize (x,y) onto the unit circle to use the cache grid based on angle.
-        // Using hypot avoids intermediate overflow/underflow issues.
-        double mag = std::hypot(x, y);
+        double mag = quickSqrt(x*x+y*y);
         // Avoid division by zero if magnitude is extremely small (should be covered by origin check)
         // if (mag < 1e-15) return 0.0; // Or handle based on signs of x, y? 0 is atan2 convention
 
