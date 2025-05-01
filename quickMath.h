@@ -437,12 +437,13 @@ namespace quickMath {
     * this allows for extended, functional math
     * @param a Base.
     * @param b Exponent.
-    * @return Approximation of a^b. 2^2 = 4, 2^-2 = 1/4, -2^2 = 4, 2^3 = -8, -2^2.2 = ~4.59, -2^-3.2 = -9.19
+    * @return Approximation of a^b. 2^2 = 4, 2^-2 = 1/4, -2^2 = 4, 2^3 = -8, -2^2.2 = NaN, -2^-3.2 = NaN
     * @note Accuracy (default cache): ~10^-10 relative error average. Performance: Faster than std::pow.
     */
     inline double quickPow(double a, double b) {
         if (a == 0.0) return b == 0.0 ? 1.0: b < 0.0 ? std::numeric_limits<double>::infinity(): 0.0;
         if (b == 0.0) return 1;
+        if (a < 0 && b - (int)b != 0.0) return std::numeric_limits<double>::quiet_NaN();
 
         // check how the law of signs will apply to the result of the calculation, -2^2 = 4 -> positive sign, -2^-3 = -8 -> negative sign
         bool negativesign = false;
