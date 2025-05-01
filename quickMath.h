@@ -14,7 +14,7 @@
 
 /**
  * @author Alexander Desilets - AlexCDesilets@gmail.com
- * @copyright GNU General Pubnlic license V3.0
+ * @copyright GNU General Pubnlic license V3.0 + Commercial
  * @brief Provides fast approximations for common math functions using lookup tables.
  * @details This namespace contains functions designed for speed, primarily aimed at
  * applications like real-time graphics or simulations where maximum performance
