@@ -433,80 +433,33 @@ namespace quickMath {
     * @details Implements a^b = 10^(b * log10(a)) using quickLog and quickUnlog.
     * Includes handling for special cases (a=0, a=1, b=0, b=1) and
     * negative base 'a' raised to integer powers 'b'. Matches std::pow domain for real results.
+    * custom rules for negative base raised to fractional power, assumes the sign only flips when the fractional power passes an integral checkpoint
+    * this allows for extended, functional math
     * @param a Base.
     * @param b Exponent.
-    * @return Approximation of a^b. Returns NaN for invalid inputs (e.g., negative base to non-integer power, 0^neg, log error). Returns Inf/0 on overflow/underflow.
+    * @return Approximation of a^b. 2^2 = 4, 2^-2 = 1/4, -2^2 = 4, 2^3 = -8, -2^2.2 = ~4.59, -2^-3.2 = -9.19
     * @note Accuracy (default cache): ~10^-10 relative error average. Performance: Faster than std::pow.
     */
     inline double quickPow(double a, double b) {
-        const double epsilon = 1e-12; // Local epsilon
+        if (a == 0.0) return b == 0.0 ? 1.0: b < 0.0 ? std::numeric_limits<double>::infinity(): 0.0;
+        if (b == 0.0) return 1;
 
-        // --- Handle Special Exponent Cases ---
-        if (std::abs(b) < epsilon) { // b == 0?
-             // 0^0 = 1, x^0 = 1 (incl Inf^0 = 1, NaN^0=1 per std::pow)
-             return 1.0;
-        }
-        if (std::abs(b - 1.0) < epsilon) return a; // a^1 = a
+        // check how the law of signs will apply to the result of the calculation, -2^2 = 4 -> positive sign, -2^-3 = -8 -> negative sign
+        bool negativesign = false;
+        if (a < 0 && std::abs((int)b)%2==1) negativesign = true;
 
-        // --- Handle Special Base Cases ---
-        if (std::abs(a) < epsilon) { // a == 0?
-            if (b > 0.0) return 0.0; // 0^positive = 0
-            else return std::numeric_limits<double>::infinity(); // 0^negative = +Inf (pole error)
-        }
-         if (std::abs(a - 1.0) < epsilon) return 1.0; // 1^b = 1
+        double base = std::abs(a);
+        double exponent = std::abs(b);
+        
+        // Check if the result has to be the reciporcal of the calculation, 2^-2 = 1/2^2
+        bool negativeExponent = false;
+        if (b < 0) negativeExponent = true;
 
-        // --- Handle Negative Base ---
-        if (a < 0.0) {
-            double rounded_b = std::round(b);
-            if (std::abs(b - rounded_b) < epsilon) { // b is integer?
-                int int_b = static_cast<int>(rounded_b);
-                // Calculate magnitude |a|^b
-                 double log_abs_a = quickLog(-a);
-                 if (!std::isfinite(log_abs_a)) return std::numeric_limits<double>::quiet_NaN();
-                 double exponent = b * log_abs_a; // Use original b double for exponent calc
-                 // Decompose exponent
-                 double k_double_neg = std::floor(exponent);
-                 double frac_part_neg = exponent - k_double_neg;
-                 int exp_part_neg = static_cast<int>(k_double_neg);
-                 // Adjust frac_part_neg
-                 if (std::abs(frac_part_neg) < epsilon) { frac_part_neg = 0.0; }
-                 else if (std::abs(frac_part_neg - 1.0) < epsilon) { frac_part_neg = 0.0; exp_part_neg += 1; }
-                 else if (frac_part_neg < 0.0) { frac_part_neg += 1.0; exp_part_neg -= 1; }
-                 // Calculate 10^frac_part
-                 double mant_neg = quickUnlog(frac_part_neg);
-                 if (!std::isfinite(mant_neg)) return std::numeric_limits<double>::quiet_NaN();
-                 // Calculate magnitude = (10^f') * (10^k')
-                 double magnitude = mant_neg * powerOf10(exp_part_neg);
-                // Apply sign based on odd/even integer exponent
-                return (int_b % 2 != 0) ? -magnitude : magnitude;
-            } else {
-                // Negative base to non-integer power -> Domain error in reals
-                return std::numeric_limits<double>::quiet_NaN();
-            }
-        }
+        double result = quickUnlog(exponent * quickLog(base));
 
-        // --- Handle Positive Base (a > 0) ---
-        double log_a = quickLog(a);
-        if (!std::isfinite(log_a)) return std::numeric_limits<double>::quiet_NaN(); // Check log result
+        if (negativeExponent) result = 1.0 / result;
 
-        double exponent = b * log_a;
-
-        // Decompose exponent
-        double k_double = std::floor(exponent);
-        double frac_part = exponent - k_double;
-        int exp_part = static_cast<int>(k_double);
-
-        // Adjust frac_part for precision near 0 and 1
-        if (std::abs(frac_part) < epsilon) { frac_part = 0.0; }
-        else if (std::abs(frac_part - 1.0) < epsilon) { frac_part = 0.0; exp_part += 1; }
-        else if (frac_part < 0.0) { frac_part += 1.0; exp_part -= 1; }
-
-        // Calculate 10^frac_part
-        double mant = quickUnlog(frac_part);
-        if (!std::isfinite(mant)) return std::numeric_limits<double>::quiet_NaN(); // Check unlog result
-
-        // Return (10^f') * (10^k')
-        return mant * powerOf10(exp_part);
+        return negativesign ? -1 * result:result;
     }
 
     /**
